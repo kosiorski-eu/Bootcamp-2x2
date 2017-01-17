@@ -1,40 +1,70 @@
-(function($) {
+function EventEmitter() {
+    this.events = {};
+}
 
-    $(document).ready(function() {
-		
-		//wszystkie elementy <div>, posiadające zarówno klasę “grid” oraz klasę “grid-12”
-		var div = $("div.grid, div.grid-12");
-		
-		//wszystkie elementy <a>, których atrybut “href" zaczyna się na “http”, znajdujące się w elemencie o klasie “nav”
-		var a = $(".nav a[href^='http']");
-		
-		//wszystkie elementy <input>, których typ to “radio” lub “checkbox” oraz dodatkowo nie są aktualnie zaznaczone (checked)
-		var input = $("input[type='radio'], input[type='checkbox']").not(":checked");
-		
-		//wyłącznie pierwszy element <p>, który jest pusty (nie zawiera dzieci) oraz znajduje się w elemencie <div> z identyfikatorem “text“
-		var p = $("div#text p:first:empty");
-		
-		//wszystkie elementy z klasą “pagination-item”, które nie są elementem <span>
-		var i = $(":not(span).pagination-item");
+EventEmitter.prototype.on = function(type, fn) {
 
-    });
+    if(!type || !fn) return;
+    this.events[type] = this.events[type] || [];
+    this.events[type].push(fn);
 
-})(jQuery);
+};
 
+EventEmitter.prototype.emit = function(type, data) {
+    var fns = this.events[type];
+    if(!fns || !fns.length) return;
+    for(var i = 0; i < fns.length; i++) {
+        fns[i](data);
+    }
+};
 
+function Database(url) {
+    EventEmitter.call(this);
+    this.url = url;
+}
 
+Database.prototype = Object.create(EventEmitter.prototype);
+Database.prototype.constructor = Database;
 
+Database.prototype.connect = function() {
+    this.emit("connect", this.url);
+};
 
+Database.prototype.disconnect = function() {
 
+    this.emit("disconnect", this.url);
 
+};
 
+var ev = new EventEmitter();
 
+ev.on("hello", function(message) {
+    console.log("Witaj " + message + "!");
+});
 
+ev.on("hello", function(message) {
+    console.log("Siema " + message + ".");
+});
 
+ev.on("goodbye", function() {
+    console.log("Do widzenia!");
+});
 
+ev.emit("hello", "Marek");
+ev.emit("goodbye");
+ev.emit("custom");
 
+var db = new Database("db://localhost:3000");
+db.on("connect", function(url) {
+    console.log("Połączenie z bazą pod adresem " + url + " zostało ustanowione.");
+});
 
+db.on("disconnect", function(url) {
+    console.log("Połączenie z bazą pod adresem " + url + " zostało zakończone.");
+});
 
+db.connect();
 
-
-
+setTimeout(function() {
+    db.disconnect();
+}, 5000);
